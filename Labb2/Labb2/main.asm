@@ -4,7 +4,7 @@
 	
 STR: .db "DATORTEKNIK", 0
 
-; BTAB � Morse bin�rkod f�r A�Z (0x41�0x5A)
+; BTAB – Morse binärkod för A–Z (0x41–0x5A)
 ; Index = ASCII - 0x41
 BTAB:
 	.db 0x60; A
@@ -43,18 +43,19 @@ BTAB:
 
 ; Initialize hardware
 HW_INIT:
+	sbi DDRB, 7   ; Sätt bit 7 i DDRB till 1 och därmed gör PB7 till utgång
 	ret
 
-; Huvudloop som s�nder en hel str�ng
+; Huvudloop som sänder en hel sträng
 MORSE:
-	;TODO pusha alla register vi anv�nder till stacken (inklusive Z etc)
-	; De m�ste enl instruktionerna vara op�verkade (h�h� som jag ;) )
-	; efter vi k�rt programmet	
+	;TODO pusha alla register vi använder till stacken (inklusive Z etc)
+	; De måste enl instruktionerna vara opåverkade (höhö som jag ;) LOL BB busted by Slimy, 1000ug senare)
+	; efter vi kört programmet	
 	push r16
 	push r30
 	push r31
 
-	ldi r30, low(STR << 1)	; Ladda ZL-pekare (f�r str�ngen)
+	ldi r30, low(STR << 1)	; Ladda ZL-pekare (för strängen)
 	ldi r30, high(STR << 1)	; Ladda ZH-pekare
 	
 	call GET_CHAR			; Get first character in string
@@ -89,10 +90,6 @@ GET_CHAR:
 	lpm r16, Z+			; Read character byte from Z-pointer, then increment pointer
 	ret
 
-; Sends morse character
-BEEP_CHARS:
-	ret
-
 ; Translates ASCII-character to binary
 ; Character in r16
 ; Output morse representation in r16
@@ -100,7 +97,7 @@ LOOKUP:
 	push r30			; Store Z-pointer on stack
 	push r31
 	
-	; Subtrahera ASCII-kod f�r f�rsta bokstaven 'A' ($41)
+	; Subtrahera ASCII-kod för första bokstaven 'A' ($41)
 	subi r16, 'A'		; r16 = index i BTAB
 
 	; Ladda addressen till BTAB i Z-pointer
@@ -148,6 +145,15 @@ BIT:
 	ret
 
 BEEP:
+	ldi r18, 20; vi ska loopa 20 gånger, (20 millisekunder)
+	;TODO göra så att r18 inte förändrar värde egentligen. Spara i stacken
+BeepLoop:
+	;Genom att växla mellan 1 och 0 med en frekvens på ungefär 500 hz generar vi en hörbar ton
+	sbi PORTB, 7  ;Sätter pin 7 på utgång B hög. 
+	call DELAY ; Väntar ungefär 1 millisekund, därav frekvensen 500hz
+	cbi PORTB, 7; sätter pin 7 på utgång B låg
+	dec r18;    en runda har gått på loopen
+	brne BEEPLoop; om r18 inte blev noll så fortsätter vi loopa
 	ret
 
 BEEP3:
@@ -157,6 +163,13 @@ BEEP3:
 	ret
 
 NOBEEP:
+	ldi r18, 20; vi ska loopa 20 gånger, (20 millisekunder)
+	cbi PORTB, 7; sätter utgången till 0, vi vill inte ha något ljud
+	;TODO göra så att r18 inte förändrar värde egentligen. Spara i stacken
+NoBeepLoop:
+	call DELAY ; Väntar ungefär 1 millisekund, därav frekvensen 500hz
+	dec r18;    en runda har gått på loopen
+	brne NoBEEPLoop; om r18 inte blev noll så fortsätter vi loopa
 	ret
 
 NOBEEP3:
@@ -165,16 +178,15 @@ NOBEEP3:
 	call NOBEEP
 	ret
 
-; Rutinen DELAY �r en v�nteloop som samtidigt
-; avger en skvallersignal p� PB7.
-; PB7 �r h�g (jag med) n�r rutinen k�rs
+; Rutinen DELAY är en vänteloop som samtidigt
+; avger en skvallersignal på PB7.
+; PB7 är hög (jag med) när rutinen körs
 ;
-; Med angivet v�rde i r16 v�ntar rutinen
-; ungef�r en millisekund @ 1 MHz
+; Med angivet värde i r16 väntar rutinen
+; ungefär en millisekund @ 1 MHz
 ;
-; PORTB m�ste konfigureras separat.
+; PORTB måste konfigureras separat.
 DELAY:
-	sbi		PORTB,7
 	ldi		r16,10		; Decimal bas
 delayYttreLoop:
 	ldi		r17,$1F
@@ -183,5 +195,4 @@ delayInreLoop:
 	brne	delayInreLoop
 	dec		r16
 	brne	delayYttreLoop
-	cbi		PORTB,7
 	ret
